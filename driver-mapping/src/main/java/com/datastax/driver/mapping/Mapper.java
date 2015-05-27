@@ -15,6 +15,7 @@
  */
 package com.datastax.driver.mapping;
 
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -80,9 +81,13 @@ public class Mapper<T> {
     }
 
     PreparedStatement getPreparedQuery(QueryType type){
-        String queryString = type.makePreparedQueryString(tableMetadata, mapper, saveOptions);
+        return getPreparedQuery(type, Collections.<ColumnMapper<?>>emptySet());
+    }
+
+    PreparedStatement getPreparedQuery(QueryType type, Set<ColumnMapper<?>> columns) {
+        String queryString = type.makePreparedQueryString(tableMetadata, mapper, saveOptions, columns);
         PreparedStatement stmt = preparedQueries.get(queryString);
-        if (stmt == null){
+        if (stmt == null) {
             stmt = session().prepare(queryString);
             preparedQueries.putIfAbsent(queryString, stmt);
         }
@@ -111,13 +116,23 @@ public class Mapper<T> {
      * @return a query that saves {@code entity} (based on it's defined mapping).
      */
     public Statement saveQuery(T entity) {
-        PreparedStatement ps = getPreparedQuery(QueryType.SAVE);
-
-        BoundStatement bs = ps.bind();
-        int i = 0;
+        Map<ColumnMapper<?>, Object> values = new HashMap<ColumnMapper<?>, Object>();
         for (ColumnMapper<T> cm : mapper.allColumns()) {
             Object value = cm.getValue(entity);
-            bs.setBytesUnsafe(i++, value == null ? null : cm.getDataType().serialize(value, protocolVersion));
+            if (mapper.strategyType == StrategyType.NOT_NULL_FIELDS) {
+                if (value != null) {
+                    values.put(cm, value);
+                }
+            }
+            else {
+                values.put(cm, value);
+            }
+        }
+        PreparedStatement ps = getPreparedQuery(QueryType.SAVE, values.keySet());
+        BoundStatement bs = ps.bind();
+        int i = 0;
+        for (Map.Entry<ColumnMapper<?>, Object> entry : values.entrySet()) {
+            bs.setBytesUnsafe(i++, entry.getValue() == null ? null : entry.getKey().getDataType().serialize(entry.getValue(), protocolVersion));
         }
 
         if (this.saveOptions != null) {
