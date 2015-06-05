@@ -38,7 +38,7 @@ public class Result<T> implements Iterable<T> {
     private T map(Row row) {
         T entity = mapper.newEntity();
         for (ColumnMapper<T> cm : mapper.allColumns()) {
-            ByteBuffer bytes = row.getBytesUnsafe(cm.getColumnName());
+            ByteBuffer bytes = row.getBytesUnsafe(cm.getAlias() != null ? cm.getAlias() : cm.getColumnName());
             if (bytes != null)
                 cm.setValue(entity, cm.getDataType().deserialize(bytes, protocolVersion));
         }

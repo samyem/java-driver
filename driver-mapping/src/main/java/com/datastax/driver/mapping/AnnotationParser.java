@@ -219,6 +219,16 @@ class AnnotationParser {
         return field.getName().toLowerCase();
     }
 
+    public static String alias(Field field) {
+        Column column = field.getAnnotation(Column.class);
+        if (column != null && column.computed()) {
+            // this could theoretically collide with an existing column name
+            // but it is highly unlikely
+            return "c_" + System.nanoTime();
+        }
+        return null;
+    }
+
     public static <T> AccessorMapper<T> parseAccessor(Class<T> accClass, AccessorMapper.Factory factory, MappingManager mappingManager) {
         if (!accClass.isInterface())
             throw new IllegalArgumentException("@Accessor annotation is only allowed on interfaces");

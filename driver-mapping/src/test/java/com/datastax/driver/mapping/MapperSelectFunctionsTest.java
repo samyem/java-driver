@@ -30,6 +30,7 @@ import static com.datastax.driver.core.Assertions.assertThat;
  * Tests to ensure validity of {@code computed} option in
  * {@link com.datastax.driver.mapping.annotations.Column}
  */
+@SuppressWarnings("unused")
 public class MapperSelectFunctionsTest extends CCMBridge.PerClassSingleNodeCluster {
 
     @Override
@@ -66,7 +67,6 @@ public class MapperSelectFunctionsTest extends CCMBridge.PerClassSingleNodeClust
         }
         assertThat(getObjectFailed).isTrue();
     }
-
     @Test(groups = "short")
     void should_fetch_computed_fields() {
         Mapper<User> mapper = new MappingManager(session).mapper(User.class);
@@ -76,13 +76,22 @@ public class MapperSelectFunctionsTest extends CCMBridge.PerClassSingleNodeClust
         assertThat(saved.getWriteTime()).isNotEqualTo(0);
     }
 
+    @Test(groups = "short",
+        expectedExceptions = IllegalArgumentException.class,
+        expectedExceptionsMessageRegExp = "Field writeTime: attribute 'name' of annotation @Column is mandatory for computed fields")
+    void should_fail_if_field_computed_and_no_name_provided() {
+        new MappingManager(session).mapper(User4.class);
+    }
+
     @Table(name = "user")
     public static class User {
         @PartitionKey
         private int key;
         private String v;
 
-        @Column(name = "writetime(v)", computed = true)
+        // whitespaces in the column name inserted on purpose
+        // to test the alias generation mechanism
+        @Column(name = "writetime ( v )", computed = true)
         long writeTime;
 
         public User() {
@@ -173,6 +182,48 @@ public class MapperSelectFunctionsTest extends CCMBridge.PerClassSingleNodeClust
         }
 
         public User3(int k, String val) {
+            this.key = k;
+            this.v = val;
+        }
+
+        public int getKey() {
+            return this.key;
+        }
+
+        public void setKey(int pk) {
+            this.key = pk;
+        }
+
+        public String getV() {
+            return this.v;
+        }
+
+        public void setV(String val) {
+            this.v = val;
+        }
+
+        public byte getWriteTime() {
+            return this.writeTime;
+        }
+
+        public void setWriteTime(byte pk) {
+            this.writeTime = pk;
+        }
+    }
+
+    @Table(name = "user")
+    public static class User4 {
+        @PartitionKey
+        private int key;
+        private String v;
+
+        @Column(computed = true)
+        byte writeTime;
+
+        public User4() {
+        }
+
+        public User4(int k, String val) {
             this.key = k;
             this.v = val;
         }

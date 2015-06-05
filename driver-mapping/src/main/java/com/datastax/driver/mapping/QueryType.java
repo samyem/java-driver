@@ -15,7 +15,8 @@
  */
 package com.datastax.driver.mapping;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.common.base.Objects;
 
@@ -23,6 +24,7 @@ import com.datastax.driver.core.TableMetadata;
 import com.datastax.driver.core.querybuilder.Delete;
 import com.datastax.driver.core.querybuilder.Insert;
 import com.datastax.driver.core.querybuilder.Select;
+
 import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
 
 class QueryType {
@@ -70,15 +72,21 @@ class QueryType {
                 }
             case GET:
                 {
-                    ArrayList<String> columns = new ArrayList<String>();
-                    for (ColumnMapper cm : mapper.allColumns()){
-                        columns.add(cm.getColumnName());
+                    Select.Selection selection = select(true);
+                    for (ColumnMapper cm : mapper.allColumns()) {
+                        Select.SelectionOrAlias column = selection.column(cm.getColumnName());
+                        if (cm.getAlias() == null) {
+                            selection = column;
+                        } else {
+                            selection = column.as(cm.getAlias());
+                        }
                     }
-                    String[] columnsArray = new String[columns.size()];
-                    columnsArray = columns.toArray(columnsArray);
-                    Select select = table == null
-                                  ? select(true, columnsArray).from(mapper.getKeyspace(), mapper.getTable())
-                                  : select(true, columnsArray).from(table);
+                    Select select;
+                    if (table == null) {
+                        select = selection.from(mapper.getKeyspace(), mapper.getTable());
+                    } else {
+                        select = selection.from(table);
+                    }
                     Select.Where where = select.where();
                     for (int i = 0; i < mapper.primaryKeySize(); i++)
                         where.and(eq(mapper.getPrimaryKeyColumn(i).getColumnName(), bindMarker()));

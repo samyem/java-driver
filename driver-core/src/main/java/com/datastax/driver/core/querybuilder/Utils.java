@@ -42,19 +42,14 @@ abstract class Utils {
     }
 
     static StringBuilder joinAndAppendNames(StringBuilder sb, String separator, List<?> values) {
-        for (int i = 0; i < values.size(); i++) {
-            if (i > 0)
-                sb.append(separator);
-            appendName(values.get(i), sb);
-        }
-        return sb;
+        return joinAndAppendNames(sb, separator, values, false);
     }
 
-    static StringBuilder joinAndAppendNamesRaw(StringBuilder sb, String separator, List<?> values) {
+    static StringBuilder joinAndAppendNames(StringBuilder sb, String separator, List<?> values, boolean raw) {
         for (int i = 0; i < values.size(); i++) {
             if (i > 0)
                 sb.append(separator);
-            appendNameRaw(values.get(i), sb);
+            appendName(values.get(i), sb, raw);
         }
         return sb;
     }
@@ -163,7 +158,7 @@ abstract class Utils {
             sb.append(')');
             return true;
         } else if (value instanceof CName) {
-            appendName(((CName)value).name, sb);
+            appendName(((CName)value).name, sb, false);
             return true;
         } else if (value == null) {
             sb.append("null");
@@ -285,27 +280,25 @@ abstract class Utils {
         return appendValue(value, new StringBuilder()).toString();
     }
 
-    static StringBuilder appendName(String name, StringBuilder sb) {
+    static StringBuilder appendName(String name, StringBuilder sb, boolean raw) {
         name = name.trim();
         // FIXME: checking for token( specifically is uber ugly, we'll need some better solution.
-        if (cnamePattern.matcher(name).matches() || name.startsWith("\"") || name.startsWith("token("))
+        if (raw || cnamePattern.matcher(name).matches() || name.startsWith("\"") || name.startsWith("token("))
             sb.append(name);
         else
             sb.append('"').append(name).append('"');
         return sb;
     }
 
-    static StringBuilder appendNameRaw(String name, StringBuilder sb) {
-        name = name.trim();
-        sb.append(name);
-        return sb;
+    static StringBuilder appendName(Object name, StringBuilder sb) {
+        return appendName(name, sb, false);
     }
 
-    static StringBuilder appendName(Object name, StringBuilder sb) {
+    static StringBuilder appendName(Object name, StringBuilder sb, boolean raw) {
         if (name instanceof String) {
-            appendName((String)name, sb);
+            appendName((String)name, sb, raw);
         } else if (name instanceof CName) {
-            appendName(((CName)name).name, sb);
+            appendName(((CName)name).name, sb, raw);
         } else if (name instanceof FCall) {
             FCall fcall = (FCall)name;
             sb.append(fcall.name).append('(');
@@ -317,17 +310,8 @@ abstract class Utils {
             sb.append(')');
         } else if (name instanceof Alias) {
             Alias alias = (Alias)name;
-            appendName(alias.column, sb);
+            appendName(alias.column, sb, raw);
             sb.append(" AS ").append(alias.alias);
-        } else {
-            throw new IllegalArgumentException(String.format("Invalid column %s of type unknown of the query builder", name));
-        }
-        return sb;
-    }
-
-    static StringBuilder appendNameRaw(Object name, StringBuilder sb) {
-        if (name instanceof String) {
-            appendNameRaw((String)name, sb);
         } else {
             throw new IllegalArgumentException(String.format("Invalid column %s of type unknown of the query builder", name));
         }
