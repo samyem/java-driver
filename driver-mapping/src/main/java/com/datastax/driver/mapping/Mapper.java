@@ -15,6 +15,9 @@
  */
 package com.datastax.driver.mapping;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -44,7 +47,8 @@ public class Mapper<T> {
     final TableMetadata tableMetadata;
 
     // Cache prepared statements for each type of query we use.
-    private volatile ConcurrentMap<String, PreparedStatement> preparedQueries = new ConcurrentHashMap<String, PreparedStatement>();
+    private volatile Map<String, PreparedStatement> preparedQueriesCache = new HashMap<String, PreparedStatement>();
+    private volatile ConcurrentMap<String, Boolean> preparedQueries = new ConcurrentHashMap<String, Boolean>();
 
     private static final Function<Object, Void> NOOP = Functions.<Void>constant(null);
 
@@ -72,23 +76,26 @@ public class Mapper<T> {
                 return Mapper.this.map(rs);
             }
         };
-        this.preparedQueries.clear();
+        this.preparedQueriesCache.clear();
     }
 
     Session session() {
         return manager.getSession();
     }
 
-    PreparedStatement getPreparedQuery(QueryType type){
+    PreparedStatement getPreparedQuery(QueryType type) {
         String queryString = type.makePreparedQueryString(tableMetadata, mapper, saveOptions);
-        PreparedStatement stmt = preparedQueries.get(queryString);
-        if (stmt == null){
+        PreparedStatement stmt;
+        if (preparedQueries.putIfAbsent(queryString, true) == null) {
             stmt = session().prepare(queryString);
-            preparedQueries.putIfAbsent(queryString, stmt);
+            preparedQueriesCache.put(queryString, stmt);
+        } else {
+            do {
+                stmt = preparedQueriesCache.get(queryString);
+            } while (stmt == null);
         }
         return stmt;
     }
-
     /**
      * The {@code MappingManager} managing this mapper.
      *
@@ -122,15 +129,16 @@ public class Mapper<T> {
 
         if (this.saveOptions != null) {
             if (this.saveOptions.getTtlValue() != -1) {
-                bs.setInt("ttlvalue", saveOptions.getTtlValue());
+                bs.setInt(i++, saveOptions.getTtlValue());
             }
             if (this.saveOptions.getTimestampValue() != -1) {
-                bs.setLong("tsvalue", saveOptions.getTimestampValue());
+                bs.setLong(i++, saveOptions.getTimestampValue());
             }
             this.saveOptions = null;
         }
         if (mapper.writeConsistency != null)
             bs.setConsistencyLevel(mapper.writeConsistency);
+        System.out.println("bs.preparedStatement().getQueryString() = " + bs.preparedStatement().getQueryString());
         return bs;
     }
 

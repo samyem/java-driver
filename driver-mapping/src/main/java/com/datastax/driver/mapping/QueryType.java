@@ -147,11 +147,11 @@ class QueryType {
     
     private void addSaveOptions(Insert insert, SaveOptions so){
         if (so.getTtlValue() != -1 && so.getTimestampValue() != -1) {
-            insert.using(ttl(bindMarker("ttlvalue"))).and(timestamp(bindMarker("tsvalue")));
+            insert.using(ttl(bindMarker())).and(timestamp(bindMarker()));
         } else if (so.getTtlValue() != -1) {
-            insert.using(ttl(bindMarker("ttlvalue")));
+            insert.using(ttl(bindMarker()));
         } else if (so.getTimestampValue() != -1) {
-            insert.using(timestamp(bindMarker("tsvalue")));
+            insert.using(timestamp(bindMarker()));
         }
     }
 
