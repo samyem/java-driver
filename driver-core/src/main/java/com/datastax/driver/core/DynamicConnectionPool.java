@@ -210,7 +210,7 @@ class DynamicConnectionPool extends HostConnectionPool {
         if (connectionCount < options().getMaxConnectionsPerHost(hostDistance)) {
             // Add a connection if we fill the first n-1 connections and almost fill the last one
             int currentCapacity = (connectionCount - 1) * StreamIdGenerator.MAX_STREAM_PER_CONNECTION_V2
-                + options().getMaxSimultaneousRequestsPerConnectionThreshold(hostDistance);
+                + options().getNewConnectionThreshold(hostDistance);
             if (totalInFlightCount > currentCapacity)
                 maybeSpawnNewConnection();
         }
@@ -489,7 +489,7 @@ class DynamicConnectionPool extends HostConnectionPool {
         int currentLoad = maxTotalInFlight.getAndSet(totalInFlight.get());
 
         int needed = currentLoad / StreamIdGenerator.MAX_STREAM_PER_CONNECTION_V2 + 1;
-        if (currentLoad % StreamIdGenerator.MAX_STREAM_PER_CONNECTION_V2 > options().getMaxSimultaneousRequestsPerConnectionThreshold(hostDistance))
+        if (currentLoad % StreamIdGenerator.MAX_STREAM_PER_CONNECTION_V2 > options().getNewConnectionThreshold(hostDistance))
             needed += 1;
         needed = Math.max(needed, options().getCoreConnectionsPerHost(hostDistance));
         int actual = open.get();

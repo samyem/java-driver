@@ -141,7 +141,7 @@ class SingleConnectionPool extends HostConnectionPool {
                 int inFlight = connection.inFlight.get();
 
                 if (inFlight >= Math.min(connection.maxAvailableStreams(),
-                                         options().getMaxSimultaneousRequestsPerHostThreshold(hostDistance))) {
+                                         options().getMaxRequestsPerConnection(hostDistance))) {
                     connection = waitForConnection(timeout, unit);
                     break;
                 }
@@ -217,7 +217,7 @@ class SingleConnectionPool extends HostConnectionPool {
                     int inFlight = connection.inFlight.get();
 
                     if (inFlight >= Math.min(connection.maxAvailableStreams(),
-                                             options().getMaxSimultaneousRequestsPerHostThreshold(hostDistance)))
+                                             options().getMaxRequestsPerConnection(hostDistance)))
                         break;
 
                     if (connection.inFlight.compareAndSet(inFlight, inFlight + 1))
