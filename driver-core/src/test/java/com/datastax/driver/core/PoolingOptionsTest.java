@@ -83,5 +83,16 @@ public class PoolingOptionsTest {
             fail("Expected an IllegalArgumentException");
         } catch (IllegalArgumentException e) {/*expected*/}
     }
+
+    @Test(groups = "unit")
+    public void should_set_core_and_max_connections_simultaneously() {
+        PoolingOptions options = new PoolingOptions();
+        options.setProtocolVersion(ProtocolVersion.V2);
+
+        options.setConnectionsPerHost(LOCAL, 10, 15);
+
+        assertThat(options.getCoreConnectionsPerHost(LOCAL)).isEqualTo(10);
+        assertThat(options.getMaxConnectionsPerHost(LOCAL)).isEqualTo(15);
+    }
 }
 

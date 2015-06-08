@@ -4,6 +4,11 @@
 
 - [improvement] Unify "Target" enum for schema elements (JAVA-782)
 
+Merged from 2.0 branch:
+
+- [improvement] Add PoolingOptions method to set both core and max
+  connections (JAVA-662).
+
 
 ### 2.1.6
 
