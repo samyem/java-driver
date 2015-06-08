@@ -3,6 +3,8 @@
 ### 2.1.7 (in progress)
 
 - [improvement] Unify "Target" enum for schema elements (JAVA-782)
+- [improvement] Use same pool implementation for protocol v2 and v3
+  (JAVA-738).
 
 Merged from 2.0 branch:
 
