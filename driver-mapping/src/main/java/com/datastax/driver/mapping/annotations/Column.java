@@ -50,11 +50,4 @@ public @interface Column {
      */
     boolean caseSensitive() default false;
 
-    /**
-     * Whether the column is not existing in the database but is the result
-     * of a computed field in a select query.
-     *
-     * @return whether the column is computed.
-     */
-    boolean computed() default false;
 }

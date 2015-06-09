@@ -16,13 +16,15 @@
 package com.datastax.driver.mapping;
 
 import java.lang.reflect.Field;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.datastax.driver.core.DataType;
+
 import static com.datastax.driver.core.querybuilder.QueryBuilder.quote;
 
 abstract class ColumnMapper<T> {
 
-    public enum Kind { PARTITION_KEY, CLUSTERING_COLUMN, REGULAR, COMPUTED };
+    public enum Kind {PARTITION_KEY, CLUSTERING_COLUMN, REGULAR, COMPUTED};
 
     private final String columnName;
     private final String alias;
@@ -35,8 +37,8 @@ abstract class ColumnMapper<T> {
     protected final Kind kind;
     protected final int position;
 
-    protected ColumnMapper(Field field, DataType dataType, int position) {
-        this(AnnotationParser.columnName(field), AnnotationParser.alias(field), field.getName(), field.getType(), dataType, AnnotationParser.kind(field), position);
+    protected ColumnMapper(Field field, DataType dataType, int position, AtomicInteger columnNumber) {
+        this(AnnotationParser.columnName(field), columnNumber != null ? AnnotationParser.newAlias(field, columnNumber.incrementAndGet()) : null, field.getName(), field.getType(), dataType, AnnotationParser.kind(field), position);
     }
 
     private ColumnMapper(String columnName, String alias, String fieldName, Class<?> javaType, DataType dataType, Kind kind, int position) {
@@ -50,6 +52,7 @@ abstract class ColumnMapper<T> {
     }
 
     public abstract Object getValue(T entity);
+
     public abstract void setValue(T entity, Object value);
 
     public String getColumnName() {

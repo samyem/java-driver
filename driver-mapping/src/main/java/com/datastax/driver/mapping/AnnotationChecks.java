@@ -102,9 +102,9 @@ class AnnotationChecks {
     }
 
     static void checkValidComputed(Field field) {
-        Column column = field.getAnnotation(Column.class);
-        if (column != null && column.computed() && column.name().isEmpty()) {
-            throw new IllegalArgumentException(String.format("Field %s: attribute 'name' of annotation @Column is mandatory for computed fields", field.getName()));
+        Computed computed = field.getAnnotation(Computed.class);
+        if (computed != null && computed.name().isEmpty()){
+            throw new IllegalArgumentException(String.format("Field %s: attribute 'name' of annotation @Computed is mandatory for computed fields", field.getName()));
         }
     }
 
