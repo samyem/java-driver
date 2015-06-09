@@ -17,9 +17,9 @@ package com.datastax.driver.core;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 
+import com.google.common.base.Objects;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -38,7 +38,7 @@ import com.datastax.driver.core.exceptions.CodecNotFoundException;
 /**
  * A registry for {@link TypeCodec}s.
  * <p>
- * {@link CodecRegistry} instances can be create via the {@link #builder()} method:
+ * {@link CodecRegistry} instances can be created via the {@link #builder()} method:
  * <pre>
  * CodecRegistry registry = CodecRegistry.builder().withCodecs(codec1, codec2).build();
  * </pre>
@@ -121,7 +121,7 @@ public class CodecRegistry {
 
     public static class Builder {
 
-        List<TypeCodec<?>> builder = new ArrayList<TypeCodec<?>>();
+        private List<TypeCodec<?>> builder = new ArrayList<TypeCodec<?>>();
 
         /**
          * Add all 238 default TypeCodecs to the registry.
@@ -181,13 +181,13 @@ public class CodecRegistry {
         return new Builder();
     }
 
-    private static final class Key {
+    private static final class CacheKey {
 
         private final TypeToken<?> javaType;
 
         private final DataType cqlType;
 
-        private Key(TypeToken<?> javaType, DataType cqlType) {
+        private CacheKey(TypeToken<?> javaType, DataType cqlType) {
             this.javaType = javaType;
             this.cqlType = cqlType;
         }
@@ -196,34 +196,31 @@ public class CodecRegistry {
         public boolean equals(Object o) {
             if (this == o)
                 return true;
-            if (!(o instanceof Key))
+            if (o == null || getClass() != o.getClass())
                 return false;
-            Key key = (Key)o;
-            if (javaType != null ? !javaType.equals(key.javaType) : key.javaType != null)
-                return false;
-            return !(cqlType != null ? !cqlType.equals(key.cqlType) : key.cqlType != null);
+            CacheKey that = (CacheKey)o;
+            return Objects.equal(this.javaType, that.javaType) &&
+                Objects.equal(this.cqlType, that.cqlType);
         }
 
         @Override
         public int hashCode() {
-            int result = javaType != null ? javaType.hashCode() : 0;
-            result = 31 * result + (cqlType != null ? cqlType.hashCode() : 0);
-            return result;
+            return Objects.hashCode(javaType, cqlType);
         }
     }
 
     private final ImmutableList<TypeCodec<?>> codecs;
 
-    private final LoadingCache<Key, TypeCodec<?>> cache;
+    private final LoadingCache<CacheKey, TypeCodec<?>> cache;
 
     private CodecRegistry(ImmutableList<TypeCodec<?>> codecs) {
         this.codecs = codecs;
         this.cache = CacheBuilder.newBuilder()
             .initialCapacity(400)
             .build(
-                new CacheLoader<Key, TypeCodec<?>>() {
-                    public TypeCodec<?> load(Key key) {
-                        return lookupCodec(key);
+                new CacheLoader<CacheKey, TypeCodec<?>>() {
+                    public TypeCodec<?> load(CacheKey cacheKey) {
+                        return lookupCodec(cacheKey);
                     }
                 });
     }
@@ -296,9 +293,9 @@ public class CodecRegistry {
      */
     public <T> TypeCodec<T> codecFor(DataType cqlType, TypeToken<T> javaType) throws CodecNotFoundException {
         checkArgument(cqlType != null || javaType != null);
-        Key key = new Key(javaType, cqlType);
+        CacheKey cacheKey = new CacheKey(javaType, cqlType);
         try {
-            return (TypeCodec<T>)cache.getUnchecked(key);
+            return (TypeCodec<T>)cache.getUnchecked(cacheKey);
         } catch (UncheckedExecutionException e) {
             throw (CodecNotFoundException) e.getCause();
         }
@@ -330,17 +327,17 @@ public class CodecRegistry {
                 value), null, TypeToken.of(value.getClass()));
     }
 
-    private <T> TypeCodec<T> lookupCodec(Key key) {
+    private <T> TypeCodec<T> lookupCodec(CacheKey cacheKey) {
         for (TypeCodec<?> codec : codecs) {
-            if (codec.accepts(key.cqlType, key.javaType)) {
+            if (codec.accepts(cacheKey.cqlType, cacheKey.javaType)) {
                 return (TypeCodec<T>)codec;
             }
         }
         throw new CodecNotFoundException(
             String.format("Codec not found for requested pair: CQL type %s <-> Java type %s",
-                key.cqlType == null ? "ANY" : key.cqlType,
-                key.javaType == null ? "ANY" : key.javaType),
-            key.cqlType, key.javaType);
+                cacheKey.cqlType == null ? "ANY" : cacheKey.cqlType,
+                cacheKey.javaType == null ? "ANY" : cacheKey.javaType),
+            cacheKey.cqlType, cacheKey.javaType);
     }
 
 }
